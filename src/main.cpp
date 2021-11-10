@@ -40,11 +40,11 @@ void connectToWiFi()
 String readSensor()
 {
   int val = analogRead(sound);
-  // int dB = (val + 83.2073) / 11.003;
+  int dB = ((val + 83.2073) / 11.003) - 7;
   // db = 20. * (log10 (soundSensor));
   // (dB) = 16.801 x ln(sensorValue/1023) + 9.872
 
-  int dB = 20 * log10(val + 1);
+  // int dB = 20 * log10(val + 1);
   return String(dB);
 }
 
@@ -72,8 +72,8 @@ void loop()
 {
 
   int val = analogRead(sound);
-  // int dB = (val + 83.2073) / 11.003;
-  int dB = 20 * log10(val + 1);
+  int dB = ((val + 83.2073) / 11.003) - 7;
+  // int dB = 20 * log10(val + 1);
 
   delay(100);
   digitalWrite(ledIndicator, HIGH);
