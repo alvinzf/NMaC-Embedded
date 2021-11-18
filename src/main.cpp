@@ -17,12 +17,15 @@ String sensorName = "Table1";
 #define SEALEVELPRESSURE_HPA (1013.25)
 
 unsigned long lastTime = 0;
-unsigned long timerDelay = 30000;
+unsigned long timerDelay = 1000;
+unsigned long blinkInterval = 100;
+unsigned long prevMillis = 0;
 
 AsyncWebServer server(80);
 int ledIndicator = 19;
 int ledWarning = 21;
 int sound = 33;
+int ledState = LOW;
 
 void connectToWiFi()
 {
@@ -96,9 +99,20 @@ void loop()
 
   if (dB > 60)
   {
-    digitalWrite(ledWarning, HIGH);
-    delay(1000);
-    digitalWrite(ledWarning, LOW);
+    if (millis() - prevMillis >= blinkInterval)
+    {
+      prevMillis = millis();
+      if (ledState == LOW)
+      {
+        ledState = HIGH;
+      }
+      else
+      {
+        ledState = LOW;
+      }
+    }
+
+    digitalWrite(ledWarning, ledState);
   }
 
   if ((millis() - lastTime) > timerDelay)
