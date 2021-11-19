@@ -99,20 +99,23 @@ void loop()
 
   if (dB > 60)
   {
-    if (millis() - prevMillis >= blinkInterval)
-    {
-      prevMillis = millis();
-      if (ledState == LOW)
-      {
-        ledState = HIGH;
-      }
-      else
-      {
-        ledState = LOW;
-      }
-    }
+    // if (millis() - prevMillis >= blinkInterval)
+    // {
+    //   prevMillis = millis();
+    //   if (ledState == LOW)
+    //   {
+    //     ledState = HIGH;
+    //   }
+    //   else
+    //   {
+    //     ledState = LOW;
+    //   }
+    // }
 
-    digitalWrite(ledWarning, ledState);
+    // digitalWrite(ledWarning, ledState);
+    digitalWrite(ledWarning, HIGH);
+    delay(100);
+    digitalWrite(ledWarning, LOW);
   }
 
   if ((millis() - lastTime) > timerDelay)
