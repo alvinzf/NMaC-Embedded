@@ -9,6 +9,9 @@
 #define WIFI_PASSWORD "gataulupa"
 #define WIFI_TIMEOUT_MS 20000
 
+#define RXp2 16
+#define TXp2 17
+
 const char *serverName = "http://192.168.137.1/esp32/esp-post-data.php";
 
 String apiKeyValue = "tPmAT5Ab3j7F9";
@@ -17,7 +20,7 @@ String sensorName = "Table1";
 #define SEALEVELPRESSURE_HPA (1013.25)
 
 unsigned long lastTime = 0;
-unsigned long timerDelay = 1000;
+unsigned long timerDelay = 500;
 unsigned long blinkInterval = 100;
 unsigned long prevMillis = 0;
 
@@ -65,7 +68,8 @@ String readSensor()
 
 void setup()
 {
-  Serial.begin(9600);
+  Serial.begin(115200);
+  Serial2.begin(115200, SERIAL_8N1, RXp2, TXp2);
   connectToWiFi();
 
   if (!SPIFFS.begin())
@@ -78,49 +82,32 @@ void setup()
   server.on("/noise", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send_P(200, "text/plain", readSensor().c_str()); });
   server.begin();
-  pinMode(ledIndicator, OUTPUT);
-  pinMode(ledWarning, OUTPUT);
+
   pinMode(sound, INPUT);
 }
 
 void loop()
 {
 
-  int val = analogRead(sound);
-  int dB = ((val + 83.2073) / 11.003) - 7;
-  // int dB = 20 * log10(val + 1);
-
-  delay(100);
-  digitalWrite(ledIndicator, HIGH);
-  Serial.print(val, DEC);
-  Serial.print("\t");
-  Serial.print(dB, DEC);
-  Serial.println();
-
-  if (dB > 60)
-  {
-    // if (millis() - prevMillis >= blinkInterval)
-    // {
-    //   prevMillis = millis();
-    //   if (ledState == LOW)
-    //   {
-    //     ledState = HIGH;
-    //   }
-    //   else
-    //   {
-    //     ledState = LOW;
-    //   }
-    // }
-
-    // digitalWrite(ledWarning, ledState);
-    digitalWrite(ledWarning, HIGH);
-    delay(100);
-    digitalWrite(ledWarning, LOW);
-  }
-
   if ((millis() - lastTime) > timerDelay)
   {
-    //Check WiFi connection status
+    int val = analogRead(sound);
+    int dB = ((val + 83.2073) / 11.003) - 7;
+    // int dB = 20 * log10(val + 1);
+    String classification = "";
+    if (Serial2.available() > 0)
+    {
+      // Serial.println(Serial2.readString());
+      classification = Serial2.readString();
+    }
+
+    delay(100);
+    Serial.print(val, DEC);
+    Serial.print("\t");
+    Serial.print(dB, DEC);
+    Serial.println();
+
+    // Check WiFi connection status
     if (WiFi.status() == WL_CONNECTED)
     {
       WiFiClient client;
@@ -133,24 +120,24 @@ void loop()
       http.addHeader("Content-Type", "application/x-www-form-urlencoded");
 
       // Prepare your HTTP POST request data
-      String httpRequestData = "api_key=" + apiKeyValue + "&sensor=" + sensorName + "&value=" + String(dB) + "";
+      String httpRequestData = "api_key=" + apiKeyValue + "&sensor=" + sensorName + "&value=" + String(dB) + "&classification=" + classification + "";
       Serial.print("httpRequestData: ");
       Serial.println(httpRequestData);
 
       // You can comment the httpRequestData variable above
       // then, use the httpRequestData variable below (for testing purposes without the BME280 sensor)
-      //String httpRequestData = "api_key=tPmAT5Ab3j7F9&sensor=BME280&location=Office&value1=24.75&value2=49.54&value3=1005.14";
+      // String httpRequestData = "api_key=tPmAT5Ab3j7F9&sensor=BME280&location=Office&value1=24.75&value2=49.54&value3=1005.14";
 
       // Send HTTP POST request
       int httpResponseCode = http.POST(httpRequestData);
 
       // If you need an HTTP request with a content type: text/plain
-      //http.addHeader("Content-Type", "text/plain");
-      //int httpResponseCode = http.POST("Hello, World!");
+      // http.addHeader("Content-Type", "text/plain");
+      // int httpResponseCode = http.POST("Hello, World!");
 
       // If you need an HTTP request with a content type: application/json, use the following:
-      //http.addHeader("Content-Type", "application/json");
-      //int httpResponseCode = http.POST("{\"value1\":\"19\",\"value2\":\"67\",\"value3\":\"78\"}");
+      // http.addHeader("Content-Type", "application/json");
+      // int httpResponseCode = http.POST("{\"value1\":\"19\",\"value2\":\"67\",\"value3\":\"78\"}");
 
       if (httpResponseCode > 0)
       {
