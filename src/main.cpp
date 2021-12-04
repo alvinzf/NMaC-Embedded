@@ -46,7 +46,6 @@ void connectToWiFi()
   if (WiFi.status() != WL_CONNECTED)
   {
     Serial.println("Failed");
-    // take action
   }
   else
   {
@@ -58,11 +57,8 @@ void connectToWiFi()
 String readSensor()
 {
   int val = analogRead(sound);
-  int dB = ((val + 83.2073) / 11.003) - 7;
-  // db = 20. * (log10 (soundSensor));
-  // (dB) = 16.801 x ln(sensorValue/1023) + 9.872
-
-  // int dB = 20 * log10(val + 1);
+  // int dB = ((val + 83.2073) / 11.003) - 7;
+  int dB = map(val, 0, 1500, 30, 115);
   return String(dB);
 }
 
@@ -92,52 +88,34 @@ void loop()
   if ((millis() - lastTime) > timerDelay)
   {
     int val = analogRead(sound);
-    int dB = ((val + 83.2073) / 11.003) - 7;
+    // int dB = ((val + 83.2073) / 11.003) - 7;
     // int dB = 20 * log10(val + 1);
+    int dB = map(val, 0, 1500, 30, 115);
     String classification = "";
     if (Serial2.available() > 0)
     {
-      // Serial.println(Serial2.readString());
+
       classification = Serial2.readString();
     }
-
-    delay(100);
     Serial.print(val, DEC);
     Serial.print("\t");
     Serial.print(dB, DEC);
     Serial.println();
 
-    // Check WiFi connection status
     if (WiFi.status() == WL_CONNECTED)
     {
       WiFiClient client;
       HTTPClient http;
 
-      // Your Domain name with URL path or IP address with path
       http.begin(client, serverName);
 
-      // Specify content-type header
       http.addHeader("Content-Type", "application/x-www-form-urlencoded");
 
-      // Prepare your HTTP POST request data
       String httpRequestData = "api_key=" + apiKeyValue + "&sensor=" + sensorName + "&value=" + String(dB) + "&classification=" + classification + "";
       Serial.print("httpRequestData: ");
       Serial.println(httpRequestData);
 
-      // You can comment the httpRequestData variable above
-      // then, use the httpRequestData variable below (for testing purposes without the BME280 sensor)
-      // String httpRequestData = "api_key=tPmAT5Ab3j7F9&sensor=BME280&location=Office&value1=24.75&value2=49.54&value3=1005.14";
-
-      // Send HTTP POST request
       int httpResponseCode = http.POST(httpRequestData);
-
-      // If you need an HTTP request with a content type: text/plain
-      // http.addHeader("Content-Type", "text/plain");
-      // int httpResponseCode = http.POST("Hello, World!");
-
-      // If you need an HTTP request with a content type: application/json, use the following:
-      // http.addHeader("Content-Type", "application/json");
-      // int httpResponseCode = http.POST("{\"value1\":\"19\",\"value2\":\"67\",\"value3\":\"78\"}");
 
       if (httpResponseCode > 0)
       {
