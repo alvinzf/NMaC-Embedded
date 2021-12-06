@@ -20,7 +20,7 @@ String sensorName = "Table1";
 #define SEALEVELPRESSURE_HPA (1013.25)
 
 unsigned long lastTime = 0;
-unsigned long timerDelay = 500;
+unsigned long timerDelay = 800;
 unsigned long blinkInterval = 100;
 unsigned long prevMillis = 0;
 
