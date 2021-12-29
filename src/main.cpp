@@ -1,9 +1,6 @@
 #include <Arduino.h>
 #include "WiFi.h"
-#include "ESPAsyncWebServer.h"
-#include "SPIFFS.h"
 #include <HTTPClient.h>
-#include <Wire.h>
 
 #define WIFI_NETWORK "ANU"
 #define WIFI_PASSWORD "gataulupa"
@@ -16,19 +13,11 @@ const char *serverName = "http://192.168.137.1/esp32/esp-post-data.php";
 
 String apiKeyValue = "tPmAT5Ab3j7F9";
 String sensorName = "Table1";
+String classification = "";
+String data;
+String dB;
 
-#define SEALEVELPRESSURE_HPA (1013.25)
-
-unsigned long lastTime = 0;
-unsigned long timerDelay = 800;
-unsigned long blinkInterval = 100;
-unsigned long prevMillis = 0;
-
-AsyncWebServer server(80);
-int ledIndicator = 19;
-int ledWarning = 21;
 int sound = 33;
-int ledState = LOW;
 
 void connectToWiFi()
 {
@@ -53,13 +42,23 @@ void connectToWiFi()
     Serial.println(WiFi.localIP());
   }
 }
-
-String readSensor()
+String getValue(String data, char separator, int index)
 {
-  int val = analogRead(sound);
-  // int dB = ((val + 83.2073) / 11.003) - 7;
-  int dB = map(val, 0, 1500, 30, 115);
-  return String(dB);
+  int found = 0;
+  int strIndex[] = {0, -1};
+  int maxIndex = data.length() - 1;
+
+  for (int i = 0; i <= maxIndex && found <= index; i++)
+  {
+    if (data.charAt(i) == separator || i == maxIndex)
+    {
+      found++;
+      strIndex[0] = strIndex[1] + 1;
+      strIndex[1] = (i == maxIndex) ? i + 1 : i;
+    }
+  }
+
+  return found > index ? data.substring(strIndex[0], strIndex[1]) : "";
 }
 
 void setup()
@@ -68,39 +67,22 @@ void setup()
   Serial2.begin(115200, SERIAL_8N1, RXp2, TXp2);
   connectToWiFi();
 
-  if (!SPIFFS.begin())
-  {
-    Serial.println("An Error has occurred while mounting SPIFFS");
-    return;
-  }
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send(SPIFFS, "/index.html"); });
-  server.on("/noise", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send_P(200, "text/plain", readSensor().c_str()); });
-  server.begin();
-
   pinMode(sound, INPUT);
 }
 
 void loop()
 {
 
-  if ((millis() - lastTime) > timerDelay)
+  if (Serial2.available() > 0)
   {
-    int val = analogRead(sound);
-    // int dB = ((val + 83.2073) / 11.003) - 7;
-    // int dB = 20 * log10(val + 1);
-    int dB = map(val, 0, 1500, 30, 115);
-    String classification = "";
-    if (Serial2.available() > 0)
-    {
-
-      classification = Serial2.readString();
-    }
-    Serial.print(val, DEC);
-    Serial.print("\t");
-    Serial.print(dB, DEC);
-    Serial.println();
+    classification = "";
+    data = Serial2.readString();
+    dB = getValue(data, '&', 0);
+    classification = getValue(data, '&', 1);
+    Serial.print("dB: ");
+    Serial.println(dB);
+    Serial.print("classification: ");
+    Serial.println(classification);
 
     if (WiFi.status() == WL_CONNECTED)
     {
@@ -111,7 +93,7 @@ void loop()
 
       http.addHeader("Content-Type", "application/x-www-form-urlencoded");
 
-      String httpRequestData = "api_key=" + apiKeyValue + "&sensor=" + sensorName + "&value=" + String(dB) + "&classification=" + classification + "";
+      String httpRequestData = "api_key=" + apiKeyValue + "&sensor=" + sensorName + "&value=" + dB + "&classification=" + classification + "";
       Serial.print("httpRequestData: ");
       Serial.println(httpRequestData);
 
@@ -132,8 +114,8 @@ void loop()
     }
     else
     {
-      Serial.println("WiFi Disconnected");
+      // Serial.println("WiFi Disconnected");
     }
-    lastTime = millis();
+    // lastTime = millis();
   }
 }

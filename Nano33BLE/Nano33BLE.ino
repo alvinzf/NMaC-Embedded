@@ -15,16 +15,20 @@ static inference_t inference;
 static signed short sampleBuffer[2048];
 static bool debug_nn = false;
 unsigned int sample;
+unsigned int analog;
 unsigned long previousMillis = 0;
 const long interval = 1000;
-unsigned long previousMillisLed = 0;
-const long ledBlink = 33;
+unsigned long ledPreviousMillis = 0;
+const long ledInterval = 100;
+int ledState = LOW; 
+unsigned long state = 0;
+String spacer = "qz";
+String classification = "";
 
 void setup()
 {
     pinMode(2, OUTPUT);
     pinMode(3, OUTPUT);
-    pinMode(4, OUTPUT);
 
     Serial.begin(115200);
     Serial1.begin(115200);
@@ -45,20 +49,22 @@ void setup()
 
 void loop()
 {
+    classification = "";
     digitalWrite(2, HIGH);
     unsigned long currentMillis = millis();
     unsigned long blinkMillis = millis();
-    sample = analogRead(A1);
-
+    analog = analogRead(A1);
+    sample = map(analog, 0, 320, 30, 120);
+    if (state > 20){
+          ledState = HIGH;
+    }
     if (currentMillis - previousMillis >= interval)
     {
-        previousMillis = currentMillis;
-        _printf("%d\n", sample);
-        //         S1_printf("db: %d\n", sample);
-        if (sample >= 150)
+        previousMillis = currentMillis;     
+        state ++;
+        if (sample >= 61)
         {
-            digitalWrite(3, HIGH);
-            digitalWrite(4, HIGH);
+            
             bool m = microphone_inference_record();
             if (!m)
             {
@@ -85,20 +91,43 @@ void loop()
             _printf("(DSP: %d ms., Classification: %d ms., Anomaly: %d ms.)",
                    result.timing.dsp, result.timing.classification, result.timing.anomaly);
             _printf(": \n");
+            _printf("dB: ");
+              _printf("%d\n", sample);
+              S1_printf("%d", sample);
+              S1_printf("&");
             for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++)
             {
+                
                 _printf("    %s: %.5f\n", result.classification[ix].label, result.classification[ix].value);
+//                _printf("%.5f#", result.classification[ix].label, result.classification[ix].value);
                 S1_printf("%.5f#", result.classification[ix].label, result.classification[ix].value);
+                
             }
+
 
 #if EI_CLASSIFIER_HAS_ANOMALY == 1
             _printf("    anomaly score: %.3f\n", result.anomaly);
 #endif
-
-            digitalWrite(3, LOW);
-            digitalWrite(4, LOW);
-        }
+            if(result.classification[2].value || result.classification[3].value > 0.5){
+                state = 0; 
+             }
+        }else {
+        _printf("%d", sample);
+        _printf("&\n");
+        S1_printf("%d", sample);
+        S1_printf("&\n");
+          }
     }
+   if (blinkMillis - ledPreviousMillis >= ledInterval) {
+   ledPreviousMillis = blinkMillis;
+    if (ledState == LOW) {
+      ledState = HIGH;
+    } else {
+      ledState = LOW;
+    }
+      digitalWrite(3, ledState);
+  }   
+    
 }
 
 void _printf(const char *format, ...)
