@@ -79,11 +79,19 @@ void loop()
     data = Serial2.readString();
     dB = getValue(data, '&', 0);
     classification = getValue(data, '&', 1);
+
+    if (classification.indexOf("#") > 0)
+    {
+      classification = classification;
+    }
+    else
+    {
+      classification = "";
+    }
     Serial.print("dB: ");
     Serial.println(dB);
     Serial.print("classification: ");
     Serial.println(classification);
-
     if (WiFi.status() == WL_CONNECTED)
     {
       WiFiClient client;
@@ -114,7 +122,7 @@ void loop()
     }
     else
     {
-      // Serial.println("WiFi Disconnected");
+      Serial.println("WiFi Disconnected");
     }
     // lastTime = millis();
   }
